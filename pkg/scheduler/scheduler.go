@@ -21,7 +21,7 @@ func GetSchduler() *asynq.PeriodicTaskManager {
 		asynq.PeriodicTaskManagerOpts{
 			RedisConnOpt:               asynq.RedisClientOpt{Addr: "localhost:6379"},
 			PeriodicTaskConfigProvider: provider,         // this provider object is the interface to your config source
-			SyncInterval:               15 * time.Second, // this field specifies how often sync should happen
+			SyncInterval:               30 * time.Second, // this field specifies how often sync should happen
 		})
 	if err != nil {
 		log.Fatal(err)

@@ -9,4 +9,8 @@ func RegisterScheduleRouter(gr *gin.RouterGroup) {
 	gr.POST("/schedule", func(c *gin.Context) {
 		handler.HandleNewSchdule(c)
 	})
+	gr.DELETE("/schedule/:id", func(c *gin.Context) {
+		handler.HandleDeleteSchedule(c)
+	})
+
 }
