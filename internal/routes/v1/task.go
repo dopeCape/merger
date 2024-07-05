@@ -18,5 +18,4 @@ func RegisterTaskRouter(gr *gin.RouterGroup, broker *broker.Brokers, inspector *
 		handler.HandleDequque(c, inspector)
 	})
 	gr.GET("/tasks", handler.GetTasks)
-
 }
