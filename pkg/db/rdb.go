@@ -21,7 +21,7 @@ func NewDB() error {
 	}), &gorm.Config{})
 	// here add auto migrate code
 
-	db.AutoMigrate(&models.ApiKey{})
+	db.AutoMigrate(&models.User{})
 
 	db.AutoMigrate(&models.Task{})
 

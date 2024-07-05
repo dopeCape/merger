@@ -19,6 +19,7 @@ func Run(config shared.Config) {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc("post:task", HandleCallBackTask)
 	mux.HandleFunc("cron:task", HandleCronCallBackTask)
+	mux.HandleFunc("task:update", HandleSaveTask)
 	if err := srv.Run(mux); err != nil {
 		log.Fatalf("could not run server: %v", err)
 	}

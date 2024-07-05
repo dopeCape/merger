@@ -26,13 +26,14 @@ type Task struct {
 	IsCron        bool
 	CronExpresion string
 	Executions    []Execution
+	UserID        string
 }
 
 type Execution struct {
 	ID          string `gorm:"primarykey;unique"`
 	TaskID      string
 	Status      Status
-	ErrorCode   int
+	StatusCode  int
 	Error       string
 	RanAt       string
 	CompletedAt string

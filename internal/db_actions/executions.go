@@ -37,9 +37,23 @@ func DeleteExecutionsForTask(taskId string) error {
 	if err != nil {
 		return errors.New("Failed to connecte to db")
 	}
-	res := db.Model(&models.Execution{}).Delete("task_id = ?", taskId)
+	res := db.Where("TASK_ID = ?", taskId).Delete(&models.Execution{})
 	if res.Error != nil {
 		return err
 	}
 	return nil
+}
+
+func GetExecutionsForTask(taskID string) ([]models.Execution, error) {
+	db, err := rdb.GetDb()
+	if err != nil {
+		return nil, errors.New("Failed to connecte to db")
+	}
+	var executions []models.Execution
+	res := db.Where("TASK_ID = ?", taskID).Find(&executions)
+	if res.Error != nil {
+		return nil, err
+	}
+	return executions, nil
+
 }

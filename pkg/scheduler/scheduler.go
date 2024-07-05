@@ -52,7 +52,7 @@ func (p *RDBBasedConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, erro
 	var configs []*asynq.PeriodicTaskConfig
 	for _, task := range tasks {
 		payloadByte, _ := json.Marshal(suscriber.CronPayload{Body: json.RawMessage(task.Payload), Headers: task.Headers, URL: task.URL})
-		configs = append(configs, &asynq.PeriodicTaskConfig{Cronspec: task.CronExpresion, Task: asynq.NewTask("cron:task", payloadByte, asynq.TaskID(task.ID))})
+		configs = append(configs, &asynq.PeriodicTaskConfig{Cronspec: task.CronExpresion, Task: asynq.NewTask("cron:task", payloadByte, asynq.TaskID(task.ID), asynq.MaxRetry(8))})
 	}
 	return configs, nil
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 
 	gronx "github.com/adhocore/gronx"
 	dbactions "github.com/dopeCape/schduler/internal/db_actions"
@@ -22,6 +24,7 @@ func HandleNewSchdule(c *gin.Context) {
 		Headers        map[string]string `json:"headers"`
 		CronExpression string            `json:"cron"`
 	}
+	key := c.GetHeader("X-API-KEY")
 	err := c.ShouldBindJSON(&body)
 	if err != nil {
 		c.JSON(400, gin.H{"message": "Bad request", "details": "There was a error procecssing request body"})
@@ -52,6 +55,8 @@ func HandleNewSchdule(c *gin.Context) {
 		return
 	}
 
+	user, err := dbactions.GetUserFromAPIKey(key)
+
 	uniqueId := xid.New()
 	var headers []string
 	for k, v := range body.Headers {
@@ -68,8 +73,13 @@ func HandleNewSchdule(c *gin.Context) {
 		Status:        models.Active,
 		IsCron:        true,
 		CronExpresion: body.CronExpression,
+		UserID:        user.ID,
 	}
-	dbactions.CreateTask(&task)
+	_, err = dbactions.CreateTask(&task)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error", "details": "There was a unexpected error while enqueing the task"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"task info": task,
@@ -107,4 +117,35 @@ func HandleDeleteSchedule(c *gin.Context) {
 func IsCronJobExpValid(expression string) bool {
 	gron := gronx.New()
 	return gron.IsValid(expression)
+}
+
+func HandleGetSchedules(c *gin.Context) {
+	offsetStr := c.Query("offset")
+	var offset int = 0
+	var limit int = 20
+	prefix := strings.Split(c.GetHeader("X-API-KEY"), ".")[0]
+	var err error
+	if offsetStr != "" {
+		offset, err = strconv.Atoi(offsetStr)
+	}
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Bad request", "details": "failed to read query param offset"})
+		return
+	}
+	limitStr := c.Query("limit")
+	if limitStr != "" {
+		limit, err = strconv.Atoi(limitStr)
+	}
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Bad request", "details": "failed to read query param offset"})
+		return
+	}
+	tasks, err := dbactions.GetScheduleFromApiKey(prefix, limit, offset)
+	if err != nil {
+		c.JSON(500, gin.H{"message": "Internal server error"})
+		return
+
+	}
+	c.JSON(200, gin.H{"message": tasks})
+
 }

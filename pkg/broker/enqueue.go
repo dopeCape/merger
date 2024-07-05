@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/dopeCape/schduler/internal/models"
 	"github.com/hibiken/asynq"
 )
 
@@ -61,6 +62,27 @@ func NewPostTask(URL string, body json.RawMessage, headers map[string]string) (*
 	if err != nil {
 		return nil, err
 	}
+	return asynq.NewTask("post:task", payload, asynq.MaxRetry(8), asynq.Timeout(time.Minute*15)), nil
+}
 
-	return asynq.NewTask("post:task", payload), nil
+func NewTaskUpdateJob(task models.Task) (*asynq.Task, error) {
+	payload, err := json.Marshal(task)
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask("task:update", payload, asynq.MaxRetry(1)), nil
+}
+
+func EnqueueNewTaskUpdateJob(task models.Task) (*asynq.TaskInfo, error) {
+	br := GetBroker()
+	createdTask, err := NewTaskUpdateJob(task)
+	if err != nil {
+		return nil, err
+	}
+	info, err := br.Enqueue(createdTask, asynq.ProcessIn(time.Second*2))
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
+
 }

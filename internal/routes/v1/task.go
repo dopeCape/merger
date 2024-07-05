@@ -11,8 +11,12 @@ func RegisterTaskRouter(gr *gin.RouterGroup, broker *broker.Brokers, inspector *
 	gr.POST("/task/enqueue", func(c *gin.Context) {
 		handler.HandleEnqueue(c, broker)
 	})
+	gr.GET("/task/run-now", func(c *gin.Context) {
+		handler.RunNow(c, inspector)
+	})
 	gr.DELETE("/task/:queue/:id", func(c *gin.Context) {
 		handler.HandleDequque(c, inspector)
 	})
+	gr.GET("/tasks", handler.GetTasks)
 
 }

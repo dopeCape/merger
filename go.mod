@@ -80,4 +80,5 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.29.1 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/resend/resend-go/v2 v2.9.0 // indirect
 )

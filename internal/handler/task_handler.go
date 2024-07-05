@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	dbactions "github.com/dopeCape/schduler/internal/db_actions"
@@ -25,6 +27,7 @@ func HandleEnqueue(c *gin.Context, broker *broker.Brokers) {
 		Headers map[string]string `json:"headers"`
 	}
 	err := c.ShouldBindJSON(&body)
+	key := c.GetHeader("X-API-KEY")
 	if err != nil {
 		c.JSON(400, gin.H{"message": "Bad request", "details": "There was a error procecssing request body"})
 		return
@@ -46,6 +49,12 @@ func HandleEnqueue(c *gin.Context, broker *broker.Brokers) {
 	if len(body.Body) == 0 {
 		c.JSON(400, gin.H{"message": "body is missing", "details": "proptery body is missing from request body"})
 		return
+	}
+	user, err := dbactions.GetUserFromAPIKey(key)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error", "details": "There was a unexpected error while enqueing the task"})
+		return
+
 	}
 
 	var taskinfo *asynq.TaskInfo
@@ -76,6 +85,7 @@ func HandleEnqueue(c *gin.Context, broker *broker.Brokers) {
 		Next:    taskinfo.NextProcessAt.String(),
 		Status:  models.Active,
 		IsCron:  false,
+		UserID:  user.ID,
 	}
 	dbactions.CreateTask(&task)
 	c.JSON(http.StatusOK, gin.H{
@@ -86,7 +96,6 @@ func HandleEnqueue(c *gin.Context, broker *broker.Brokers) {
 
 func HandleDequque(c *gin.Context, inspector *inspector.Inspector) {
 	queue := c.Param("queue")
-	fmt.Println(queue)
 	if queue == "" {
 		c.JSON(400, gin.H{"message": "Bad request", "details": "paramerter quque not found "})
 		return
@@ -97,12 +106,66 @@ func HandleDequque(c *gin.Context, inspector *inspector.Inspector) {
 		return
 	}
 	err := inspector.Dequque(queue, id)
-	dbactions.DeleteExecutionsForTask(id)
-	dbactions.DeleteTask(&models.Task{ID: id})
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Task is  in active or completed state"})
+		return
+	}
+
+	err = dbactions.DeleteExecutionsForTask(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Internal server error"})
+		return
+	}
+
+	err = dbactions.DeleteTask(&models.Task{ID: id})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Internal server error"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Task dequed succesfully"})
 
+}
+
+func GetTasks(c *gin.Context) {
+	offsetStr := c.Query("offset")
+	var offset int = 0
+	var limit int = 20
+	prefix := strings.Split(c.GetHeader("X-API-KEY"), ".")[0]
+	var err error
+	if offsetStr != "" {
+		offset, err = strconv.Atoi(offsetStr)
+	}
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Bad request", "details": "failed to read query param offset"})
+		return
+	}
+	limitStr := c.Query("limit")
+	if limitStr != "" {
+		limit, err = strconv.Atoi(limitStr)
+	}
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Bad request", "details": "failed to read query param offset"})
+		return
+	}
+	tasks, err := dbactions.GetTaskForAPIKey(prefix, limit, offset)
+	if err != nil {
+		c.JSON(500, gin.H{"message": "Internal server error"})
+		return
+	}
+	c.JSON(200, gin.H{"message": tasks})
+}
+func RunNow(c *gin.Context, inspector *inspector.Inspector) {
+	queue := "default"
+	taskID := c.Query("taskID")
+	if taskID == "" {
+		c.JSON(400, gin.H{"message": "Bad request", "details": "Missing query param taskID"})
+		return
+	}
+	err := inspector.RunNow(taskID, queue)
+	if err != nil {
+		c.JSON(500, gin.H{"message": "Internal server error"})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Task run succesfully"})
+	return
 }
