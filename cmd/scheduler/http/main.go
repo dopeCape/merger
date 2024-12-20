@@ -20,7 +20,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const redisAddr = "127.0.0.1:6379"
+const redisAddr string = "127.0.0.1:6379"
 
 func main() {
 	// load env file
@@ -28,18 +28,16 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-
 	// connect to turso
 	err = rdb.NewDB()
 	if err != nil {
 		log.Fatalf("error connecting to db: %v", err)
 	}
-	//core
+	// core
 	// quque config
 	config := shared.Config{Concurrency: 1000, RedisAddress: redisAddr}
 	// app api
 	// quque worker
-
 	apiKeyService := apikey.NewApiKeySerice()
 	broker, client := broker.RunBroker(config)
 	inspectorClient, inspector := inspector.GetInspector(config)
@@ -54,17 +52,13 @@ func main() {
 		schedulerClient.Start()
 	}()
 
-	// Context to handle shutdown
-
 	// Run the subscriber in a goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		suscriber.Run(config)
 	}()
-
 	httpServer := server.GetHandler(broker, inspector, apiKeyService)
-
 	server := &http.Server{
 		Addr:    ":8000",
 		Handler: httpServer,
@@ -103,5 +97,4 @@ func main() {
 	defer client.Close()
 	defer inspectorClient.Close()
 	defer schedulerClient.Shutdown()
-
 }
